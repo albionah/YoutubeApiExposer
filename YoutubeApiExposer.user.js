@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Youtube API Exposer
 // @description Exposes API of Youtube to control Youtube remotely
-// @version 2.1.0
+// @version 2.1.2
 // @compatible firefox
 // @namespace https://github.com/albionah
 // @homepageURL https://github.com/albionah/YoutubeApiExposer
@@ -13,7 +13,7 @@
 
 let connection;
 
-async function getBasicElements() {
+function getBasicElements() {
     return new Promise((resolve) => {
         const video = document.querySelector("video");
         const player = unsafeWindow.document.getElementById("movie_player");
@@ -75,7 +75,7 @@ function uploadBasicInfo(player) {
 const videoIdPattern = new RegExp("\/watch\\?v=(.+)");
 
 function findSuitableLink() {
-    const links = document.querySelectorAll("a.yt-simple-endpoint.ytd-thumbnail");
+    const links = unsafeWindow.document.querySelectorAll("a.yt-simple-endpoint.ytd-thumbnail");
     const suitableLink = Array.from(links).find((el) => el.href.match(videoIdPattern));
     if (suitableLink) return suitableLink;
     else throw new Error("cannot hot reload");
@@ -84,7 +84,8 @@ function findSuitableLink() {
 
 function watchWithHotReload(newVideoId) {
     const element = findSuitableLink();
-    element.href = element.href.replace(videoIdPattern, (wholeMatch, videoId) => wholeMatch.replace(videoId, newVideoId));
+    element.data.commandMetadata.webCommandMetadata.url = "/watch?v=" + newVideoId;
+    element.data.watchEndpoint.videoId = newVideoId;
     element.click();
 }
 
@@ -94,8 +95,7 @@ function watchWithHardReload(videoId) {
 
 function watch(videoId) {
     try {
-        //watchWithHotReload(videoId); TODO: not functional yet
-        watchWithHardReload(videoId);
+        watchWithHotReload(videoId);
     } catch (error) {
         console.warn(error.message);
         watchWithHardReload(videoId);
