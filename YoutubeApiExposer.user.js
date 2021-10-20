@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Youtube API Exposer
 // @description Exposes API of Youtube to control Youtube remotely
-// @version 1.0.0
+// @version 2.0.0
 // @compatible firefox
 // @namespace https://github.com/albionah
 // @homepageURL https://github.com/albionah/YoutubeApiExposer
@@ -29,21 +29,17 @@ async function getBasicElements() {
 
 getBasicElements().then(({video, player}) => {
     video.addEventListener("canplaythrough", () => {
-        console.log("event canplaythrough");
+        console.debug("event canplaythrough");
         uploadBasicInfo(player);
     });
     video.addEventListener("play", () => {
-        console.log("event play");
+        console.debug("event play");
         uploadBasicInfo(player);
     });
     video.addEventListener("pause", () => {
-        console.log("event pause");
+        console.debug("event pause");
         uploadBasicInfo(player);
     });
-    // video.addEventListener("volumechange", () => {
-    //     console.log("volumechange");
-    //     uploadVolumeInfo();
-    // });
 
     connect(video, player);
 });
@@ -52,15 +48,16 @@ getBasicElements().then(({video, player}) => {
 function getMediaInfo(player) {
     return new Promise((resolve) => {
         const title = player.getVideoData()?.title;
-        const h1s = document.getElementsByTagName("h1");
-        console.debug("getting media info", title, h1s[0]?.textContent);
-        if (title || (h1s[0] && h1s[0].textContent.replace(/^[ \n]+/i, ''))) {
+        if (title) {
             const stats = player.getVideoStats();
             resolve({
                 title: title ?? h1s[0].textContent,
                 videoId: stats.docid,
-                duration: stats.len,
-                currentPosition: stats.lct,
+                duration: Number.parseFloat(stats.len),
+                currentPosition: {
+                    position: Number.parseFloat(stats.lct),
+                    timestamp: new Date().getTime()
+                },
                 isPlaying: stats.vpa !== "1"
             });
         } else {
@@ -76,13 +73,6 @@ function uploadBasicInfo(player) {
     });
 }
 
-function uploadVolumeInfo(player) {
-    console.log(JSON.stringify(player.getVideoStats()));
-    const info = {volume: player.getVideoStats().volume};
-    console.log(info);
-    connection?.send(JSON.stringify(info));
-}
-
 function connect(video, player) {
     const websocket = new WebSocket("ws://localhost:7789");
 
@@ -93,12 +83,12 @@ function connect(video, player) {
     }
     websocket.onmessage = (rawMessage) => {
         try {
-            console.log(rawMessage.data);
+            console.debug(rawMessage.data);
             const message = JSON.parse(rawMessage.data);
             switch (message.type) {
                 case "playOrPause":
-                    var evt = new KeyboardEvent('keydown', {'keyCode': 75, 'which': 75});
-                    document.dispatchEvent(evt);
+                    const event = new KeyboardEvent('keydown', {'keyCode': 75, 'which': 75});
+                    document.dispatchEvent(event);
                     break;
 
                 case "play":
@@ -144,3 +134,7 @@ function connect(video, player) {
         websocket.close();
     };
 }
+
+window.addEventListener('beforeunload', () => {
+    connection?.close();
+});
