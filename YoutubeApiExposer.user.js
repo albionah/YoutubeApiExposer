@@ -24,7 +24,6 @@ async function getBasicElements() {
             setTimeout(() => getBasicElements().then(resolve), 1000);
         }
     });
-
 }
 
 getBasicElements().then(({video, player}) => {
@@ -95,7 +94,8 @@ function watchWithHardReload(videoId) {
 
 function watch(videoId) {
     try {
-        watchWithHotReload(videoId);
+        //watchWithHotReload(videoId); TODO: not functional yet
+        watchWithHardReload(videoId);
     } catch (error) {
         console.warn(error.message);
         watchWithHardReload(videoId);
