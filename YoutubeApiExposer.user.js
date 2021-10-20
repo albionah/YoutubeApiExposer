@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Youtube API Exposer
 // @description Exposes API of Youtube to control Youtube remotely
-// @version 2.0.0
+// @version 2.1.0
 // @compatible firefox
 // @namespace https://github.com/albionah
 // @homepageURL https://github.com/albionah/YoutubeApiExposer
@@ -73,6 +73,35 @@ function uploadBasicInfo(player) {
     });
 }
 
+const videoIdPattern = new RegExp("\/watch\\?v=(.+)");
+
+function findSuitableLink() {
+    const links = document.querySelectorAll("a.yt-simple-endpoint.ytd-thumbnail");
+    const suitableLink = Array.from(links).find((el) => el.href.match(videoIdPattern));
+    if (suitableLink) return suitableLink;
+    else throw new Error("cannot hot reload");
+
+}
+
+function watchWithHotReload(newVideoId) {
+    const element = findSuitableLink();
+    element.href = element.href.replace(videoIdPattern, (wholeMatch, videoId) => wholeMatch.replace(videoId, newVideoId));
+    element.click();
+}
+
+function watchWithHardReload(videoId) {
+    location.href = `?v=${videoId}`;
+}
+
+function watch(videoId) {
+    try {
+        watchWithHotReload(videoId);
+    } catch (error) {
+        console.warn(error.message);
+        watchWithHardReload(videoId);
+    }
+}
+
 function connect(video, player) {
     const websocket = new WebSocket("ws://localhost:7789");
 
@@ -112,10 +141,8 @@ function connect(video, player) {
                     break;
 
                 case "watch":
-                    console.log(message.id);
-                    // player.cueVideoById(message.id);
-                    // player.playVideo();
-                    location.href = `?v=${message.id}`;
+                    console.debug(`watch ${message.id}`);
+                    watch(message.id);
                     break;
             }
         } catch (error) {
